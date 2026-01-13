@@ -3,7 +3,7 @@
 
 typedef unsigned long long int Money;
 
-const int START_YEAR = 2024;
+const int START_YEAR = 2025;
 const int START_MONTH = 9;
 const int PERIOD = 30;  // период симуляции
 
