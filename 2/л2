@@ -1,0 +1,334 @@
+1 Добавлен параметр года в функцию Alice_salary():
+
+c
+void Alice_salary(const int month, const int year)
+Теперь функция принимает не только месяц, но и год, чтобы определять отпуска в конкретном году.
+///////////////
+2 Создана система отслеживания отпусков:
+c
+int on_vacation = 0; // Флаг: находится ли Алиса в отпуске в этом месяце
+Переменная определяет, находится ли Алиса в отпуске в текущем месяце.
+///////////////
+3 Конкретное расписание отпусков на 2026 год:
+c
+// Алиса в отпуске в январе 2026 года
+if (year == 2026 && month == 1) {
+    on_vacation = 1;
+}
+// Алиса в отпуске в апреле 2026 года
+else if (year == 2026 && month == 4) {
+    on_vacation = 1;
+}
+// Алиса в отпуске в июле и августе 2026 года
+else if (year == 2026 && (month == 7 || month == 8)) {
+    on_vacation = 1;
+}
+///////////////
+4 Изменена логика начисления зарплаты с учетом отпусков:
+c
+// Если Алиса не в отпуске - начисляем зарплату
+if (!on_vacation) {
+    Alice.account = Alice.salary; // Начисляем базовую зарплату
+} else {
+    Alice.account = 0; // В отпуске зарплата не начисляется
+}
+///////////////
+5 Изменено время увеличения зарплаты в 2 раза:
+c
+// С сентября 2026 года зарплата увеличивается в 2 раза
+if (year >= 2026 && month >= 9 && salary_doubled == 0) {
+    Alice.salary *= 2; // Увеличиваем зарплату в 2 раза
+    salary_doubled = 1; // Устанавливаем флаг
+    Alice.premia = Alice.salary / 2; // Премия тоже увеличивается
+}
+Вместо "через 5 лет и 3 месяца" теперь зарплата увеличивается с сентября 2026 года.
+///////////////
+6 Изменена логика индексации зарплаты:
+c
+// Обычная индексация в январе каждого года (если Алиса работает в январе)
+if (month == 1 && year != 2026) { // В январе, но не в 2026 году (так как в отпуске)
+    Alice.salary *= indexation(); // Индексируем зарплату
+    Alice.premia = Alice.salary / 2; // Обновляем премию
+}
+В январе 2026 индексации не происходит, так как Алиса в отпуске.
+///////////////
+7 Добавлены проверки для дополнительных выплат:
+c
+// 13-я зарплата начисляется в декабре, если Алиса не в отпуске
+if (month == 12 && !on_vacation) {
+    Alice.account += Alice.salary; // Начисляем 13-ю зарплату
+}
+
+// Премия начисляется каждые 3 месяца, если Алиса не в отпуске
+if (month % 3 == 0 && !on_vacation) {
+    Alice.account += Alice.premia; // Начисляем премию
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+Задание 1: Добавить налог на доходы
+Условие: Добавить подоходный налог 13% с зарплаты и премии, но не с 13-й зарплаты.
+
+c
+// В функции Alice_salary добавить:
+Money salary_after_tax = Alice.salary * 0.87; // 100% - 13% = 87%
+Money premia_after_tax = Alice.premia * 0.87;
+Alice.account = salary_after_tax;
+
+// В блоке с 13-й зарплатой (она без налога):
+if (month == 12 && !on_vacation) {
+    Alice.account += Alice.salary; // Без вычета налога
+}
+
+// В блоке с премией:
+if (month % 3 == 0 && !on_vacation) {
+    Alice.account += premia_after_tax;
+}
+
+// Аналогично для Bob_salary
+Задание 2: Учесть ремонт в доме
+Условие: Алиса делает ремонт каждые 5 лет, тратя 500,000 рублей.
+
+c
+// В структуру Person добавить:
+Money repair_cost; // Стоимость ремонта
+int repair_interval; // Интервал ремонта в годах
+
+// В Alice_init добавить:
+Alice.repair_cost = 500 * 1000;
+Alice.repair_interval = 5;
+
+// Новая функция:
+void Alice_repair(const int year)
+{
+    static int last_repair_year = START_YEAR;
+    if (year >= last_repair_year + Alice.repair_interval) {
+        Alice.account -= Alice.repair_cost;
+        Alice.repair_cost *= 1.1; // Дорожает на 10% каждый раз
+        last_repair_year = year;
+    }
+}
+
+// Вызов в simulation после Alice_expenses:
+Alice_repair(year);
+Задание 3: Учесть инфляцию аренды отдельно
+Условие: Аренда растет быстрее инфляции - на 15% в год.
+
+c
+// В Bob_init добавить:
+double rent_inflation_rate = 1.15; // 15% в год
+
+// В Bob_expenses изменить:
+if (month == 1) { // В январе каждого года
+    Bob.monthly_payment *= rent_inflation_rate;
+}
+Bob.account -= Bob.monthly_payment;
+Задание 4: Добавить страховку дома
+Условие: Алиса платит 0.1% от стоимости дома ежегодно за страховку.
+
+c
+// В структуру Person добавить:
+double insurance_rate; // Ставка страховки
+
+// В Alice_init добавить:
+Alice.insurance_rate = 0.001; // 0.1%
+
+// Новая функция:
+void Alice_insurance(const int month)
+{
+    if (month == 1) { // В январе каждого года
+        Money insurance_cost = Alice.cost_house * Alice.insurance_rate;
+        Alice.account -= insurance_cost;
+    }
+}
+
+// Вызов в simulation после Alice_expenses:
+Alice_insurance(month);
+Задание 5: Учесть валютные сбережения
+Условие: Боб хранит 30% своих сбережений в долларах с ростом 5% годовых.
+
+c
+// В структуру Person добавить:
+Money usd_savings; // Сбережения в долларах
+double usd_growth_rate; // Рост курса доллара
+double usd_allocation; // Доля в долларах
+
+// В Bob_init добавить:
+Bob.usd_savings = 0;
+Bob.usd_growth_rate = 1.05; // 5% в год
+Bob.usd_allocation = 0.3; // 30%
+
+// Изменить Bob_contribution:
+void Bob_contribution()
+{
+    // Переводим часть денег в доллары
+    if (Bob.account > 0) {
+        Money to_usd = Bob.account * Bob.usd_allocation;
+        Bob.usd_savings += to_usd;
+        Bob.account -= to_usd;
+    }
+    
+    // Рублевая часть
+    Bob.contribution = (Bob.contribution + Bob.account) * Bob.rate_contribution;
+    
+    // Долларовая часть растет
+    if (month == 1) {
+        Bob.usd_savings *= Bob.usd_growth_rate;
+    }
+}
+
+// Изменить Bob_capital:
+Bob.capital = Bob.contribution + Bob.usd_savings;
+Задание 6: Учесть детей и их расходы
+Условие: У Алисы рождается ребенок через 3 года, что увеличивает расходы на 30,000 рублей в месяц.
+
+c
+// В структуру Person добавить:
+int has_child; // Есть ли ребенок
+int child_born_year; // Год рождения ребенка
+Money child_expenses; // Расходы на ребенка
+
+// В Alice_init добавить:
+Alice.has_child = 0;
+Alice.child_born_year = START_YEAR + 3;
+Alice.child_expenses = 30 * 1000;
+
+// Изменить Alice_expenses:
+void Alice_expenses(const double inflation, const int year)
+{
+    Alice.necessary_expenses *= inflation;
+    Alice.account -= Alice.necessary_expenses;
+    
+    // Добавляем расходы на ребенка
+    if (year >= Alice.child_born_year) {
+        Alice.account -= Alice.child_expenses;
+        Alice.child_expenses *= inflation; // Индексируем расходы на ребенка
+    }
+    
+    Alice.account -= Alice.monthly_payment;
+}
+Задание 7: Учесть пенсионные отчисления
+Условие: С зарплаты удерживается 22% в пенсионный фонд.
+
+c
+// В Alice_salary изменить:
+Money pension_tax = Alice.salary * 0.22;
+Alice.account = Alice.salary - pension_tax;
+
+// В структуру Person добавить:
+Money pension_savings; // Накопления в пенсионном фонде
+double pension_growth; // Рост пенсионных накоплений
+
+// В Alice_init добавить:
+Alice.pension_savings = 0;
+Alice.pension_growth = 1.07; // 7% годовых
+
+// Новая функция:
+void Alice_pension(const int month)
+{
+    if (month == 1) {
+        Alice.pension_savings *= Alice.pension_growth;
+    }
+}
+
+// В Alice_capital добавить:
+Alice.capital += Alice.pension_savings;
+Задание 8: Учесть возможность досрочного погашения ипотеки
+Условие: Алиса может досрочно погасить ипотеку, когда накопится 2 млн рублей.
+
+c
+// В структуру Person добавить:
+int mortgage_paid; // Погашена ли ипотека
+
+// В Alice_init добавить:
+Alice.mortgage_paid = 0;
+
+// Новая функция:
+void Alice_mortgage_repayment()
+{
+    if (Alice.mortgage_paid == 0 && Alice.contribution > 2000 * 1000) {
+        // Досрочное погашение
+        Alice.contribution -= 2000 * 1000;
+        Alice.monthly_payment = 0; // Больше не платим
+        Alice.mortgage_paid = 1;
+    }
+}
+
+// В simulation добавить после Alice_contribution:
+Alice_mortgage_repayment();
+
+// В Alice_expenses изменить:
+if (!Alice.mortgage_paid) {
+    Alice.account -= Alice.monthly_payment;
+}
+Задание 9: Учесть карьерный рост
+Условие: Алиса получает повышение каждые 3 года на 15%.
+
+c
+// В Alice_salary добавить:
+static int years_worked = 0;
+if (month == 1) {
+    years_worked++;
+    if (years_worked % 3 == 0 && years_worked > 0) {
+        Alice.salary *= 1.15; // Повышение на 15%
+        Alice.premia = Alice.salary / 2;
+    }
+}
+Задание 10: Сравнить с инвестициями в акции
+Условие: Добавить третьего персонажа - Карла, который инвестирует в акции с доходностью 20% годовых, но с риском.
+
+c
+Person Carl;
+
+void Carl_init()
+{
+    Carl.capital = 0;
+    Carl.account = 0;
+    Carl.salary = 300 * 1000;
+    Carl.necessary_expenses = 50 * 1000;
+    Carl.contribution = 1500 * 1000;
+    Carl.monthly_payment = 50 * 1000;
+    Carl.rate_contribution = 1.0; // Без гарантированной доходности
+}
+
+double stock_growth()
+{
+    int chance = rand() % 100;
+    if (chance < 70) { // 70% вероятность роста
+        return 1.02; // 2% в месяц (≈ 27% годовых)
+    } else if (chance < 90) { // 20% вероятность просадки
+        return 0.98; // -2% в месяц
+    } else { // 10% вероятность кризиса
+        return 0.90; // -10% в месяц
+    }
+}
+
+void Carl_contribution()
+{
+    Carl.contribution = (Carl.contribution + Carl.account) * stock_growth();
+}
+
+// Добавить в simulation обработку Карла
+// Добавить в print сравнение всех троих
+Бонусное задание: Визуализация результатов
+Условие: Вывести график роста капитала по годам.
+
+c
+void print_graph()
+{
+    printf("\nРост капитала по годам:\n");
+    printf("Год | Алиса (млн) | Боб (млн)\n");
+    printf("----|-------------|-----------\n");
+    
+    // Для простоты можно добавить массивы для хранения истории
+    // Money alice_history[PERIOD];
+    // Money bob_history[PERIOD];
+    
+    // Заполнять в simulation каждый январь
+    
+    for (int y = 0; y < PERIOD; y++) {
+        printf("%4d| %11.2f | %9.2f\n", 
+               START_YEAR + y,
+               alice_history[y] / 1000000.0,
+               bob_history[y] / 1000000.0);
+    }
+}
+Эти задания охватывают различные аспекты финансового моделирования и позволяют глубже изучить влияние разных факторов на итоговый капитал.
