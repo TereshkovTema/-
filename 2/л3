@@ -1,0 +1,478 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+typedef unsigned long long int Money;
+
+#define START_YEAR 2025
+#define START_MONTH 9
+#define PERIOD 30  // Теперь это define, а не const
+
+typedef struct Person {
+    long long int account;
+    Money capital;
+    Money premia;
+    Money salary;
+    Money monthly_payment;
+    Money necessary_expenses;
+    Money contribution;
+    Money cost_house;
+    double rate_contribution;
+    
+    // Новые поля для дополнительных заданий
+    Money usd_savings;
+    double usd_growth_rate;
+    double usd_allocation;
+    
+    int has_child;
+    int child_born_year;
+    Money child_expenses;
+    
+    Money repair_cost;
+    int repair_interval;
+    int last_repair_year;
+    
+    double insurance_rate;
+    int mortgage_paid;
+    
+    Money pension_savings;
+    double pension_growth;
+    
+    double rent_inflation_rate;
+} Person;
+
+Person Alice;
+Person Bob;
+Person Carl;
+
+// Объявляем массивы с фиксированным размером
+Money alice_history[30];
+Money bob_history[30];
+Money carl_history[30];
+
+void Bob_init()
+{
+    Bob.capital = 0;
+    Bob.account = 0;
+    Bob.salary = 300 * 1000;
+    Bob.monthly_payment = 50 * 1000;
+    Bob.necessary_expenses = 50 * 1000;
+    Bob.contribution = 1500 * 1000;
+    Bob.rate_contribution = 1.014;
+    
+    Bob.usd_savings = 0;
+    Bob.usd_growth_rate = 1.05;
+    Bob.usd_allocation = 0.3;
+    
+    Bob.rent_inflation_rate = 1.15;
+}
+
+void Alice_init()
+{
+    Alice.capital = 0;
+    Alice.account = 0;
+    Alice.salary = 300 * 1000;
+    Alice.premia = 300 * 1000 / 2;
+    Alice.monthly_payment = 192466;
+    Alice.necessary_expenses = 50 * 1000;
+    Alice.contribution = 0;
+    Alice.cost_house = 15 * 1000 * 1000;
+    Alice.rate_contribution = 1.014;
+    
+    Alice.repair_cost = 500 * 1000;
+    Alice.repair_interval = 5;
+    Alice.last_repair_year = START_YEAR;
+    
+    Alice.insurance_rate = 0.001;
+    
+    Alice.has_child = 0;
+    Alice.child_born_year = START_YEAR + 3;
+    Alice.child_expenses = 30 * 1000;
+    
+    Alice.mortgage_paid = 0;
+    
+    Alice.pension_savings = 0;
+    Alice.pension_growth = 1.07;
+}
+
+void Carl_init()
+{
+    Carl.capital = 0;
+    Carl.account = 0;
+    Carl.salary = 300 * 1000;
+    Carl.necessary_expenses = 50 * 1000;
+    Carl.contribution = 1500 * 1000;
+    Carl.monthly_payment = 50 * 1000;
+    Carl.rate_contribution = 1.0;
+    
+    Carl.usd_savings = 0;
+    Carl.usd_growth_rate = 1.0;
+    Carl.usd_allocation = 0.0;
+    
+    Carl.rent_inflation_rate = 1.0;
+}
+
+double search_inflation()
+{ 
+    int probability = (rand() % 100);
+    double inflation;
+
+    if (probability > 90) {
+        inflation = (1001 + rand() % 2);
+    }
+    if (probability <= 90 && probability > 60) {
+        inflation = (1004 + rand() % 2);
+    }
+    if (probability <= 60 && probability > 10) {
+        inflation = (1007 + rand() % 2);
+    }
+    if (probability <= 10) {
+        inflation = (1010 + rand() % 4);
+    }
+    return ((double) inflation / 1000.0);
+}
+
+double indexation()
+{
+    return ((double) (100 + rand() % 9) / 100.0);
+}
+
+void Bob_salary(const int month)
+{
+    if (month == 1) {
+        Bob.salary *= indexation();
+    }
+    Bob.account = Bob.salary * 0.87;
+}
+
+void Alice_salary(const int month, const int year)
+{
+    static int salary_doubled = 0;
+    static int years_worked = 0;
+    
+    if (month == 1) {
+        years_worked++;
+        if (years_worked % 3 == 0 && years_worked > 0) {
+            Alice.salary *= 1.15;
+            Alice.premia = Alice.salary / 2;
+        }
+    }
+    
+    if (year >= 2026 && month >= 9 && salary_doubled == 0) {
+        Alice.salary *= 2;
+        salary_doubled = 1;
+        Alice.premia = Alice.salary / 2;
+    }
+    
+    if (month == 1 && year != 2026) {
+        Alice.salary *= indexation();
+        Alice.premia = Alice.salary / 2;
+    }
+    
+    int on_vacation = 0;
+    if (year == 2026 && (month == 1 || month == 4 || month == 7 || month == 8)) {
+        on_vacation = 1;
+    }
+    
+    Money salary_after_tax = Alice.salary * 0.87;
+    Money premia_after_tax = Alice.premia * 0.87;
+    
+    if (!on_vacation) {
+        Alice.account = salary_after_tax;
+    } else {
+        Alice.account = 0;
+    }
+    
+    if (month == 12 && !on_vacation) {
+        Alice.account += Alice.salary;
+    }
+    
+    if (month % 3 == 0 && !on_vacation) {
+        Alice.account += premia_after_tax;
+    }
+    
+    if (!on_vacation) {
+        Money pension_contribution = Alice.salary * 0.22;
+        Alice.pension_savings += pension_contribution;
+    }
+}
+
+void Carl_salary(const int month)
+{
+    if (month == 1) {
+        Carl.salary *= indexation();
+    }
+    Carl.account = Carl.salary * 0.87;
+}
+
+void Bob_expenses(const double inflation, const int month)
+{
+    Bob.necessary_expenses *= inflation;
+    Bob.account -= Bob.necessary_expenses;
+    
+    if (month == 1) {
+        Bob.monthly_payment *= Bob.rent_inflation_rate;
+    }
+    Bob.account -= Bob.monthly_payment;
+}
+
+void Alice_expenses(const double inflation, const int year)
+{
+    Alice.necessary_expenses *= inflation;
+    Alice.account -= Alice.necessary_expenses;
+    
+    if (year >= Alice.child_born_year) {
+        Alice.account -= Alice.child_expenses;
+        Alice.child_expenses *= inflation;
+    }
+    
+    if (!Alice.mortgage_paid) {
+        Alice.account -= Alice.monthly_payment;
+    }
+}
+
+void Carl_expenses(const double inflation, const int month)
+{
+    Carl.necessary_expenses *= inflation;
+    Carl.account -= Carl.necessary_expenses;
+    
+    Carl.monthly_payment *= inflation;
+    Carl.account -= Carl.monthly_payment;
+}
+
+void Bob_contribution(const int month)
+{
+    if (Bob.account > 0) {
+        Money to_usd = Bob.account * Bob.usd_allocation;
+        Bob.usd_savings += to_usd;
+        Bob.account -= to_usd;
+    }
+    
+    Bob.contribution = (Bob.contribution + Bob.account) * Bob.rate_contribution;
+    
+    if (month == 1) {
+        Bob.usd_savings *= Bob.usd_growth_rate;
+    }
+}
+
+void Alice_contribution()
+{
+    Alice.contribution = (Alice.contribution + Alice.account) * Alice.rate_contribution;
+}
+
+double stock_growth()
+{
+    int chance = rand() % 100;
+    if (chance < 70) {
+        return 1.02;
+    } else if (chance < 90) {
+        return 0.98;
+    } else {
+        return 0.90;
+    }
+}
+
+void Carl_contribution()
+{
+    Carl.contribution = (Carl.contribution + Carl.account) * stock_growth();
+}
+
+void Alice_repair(const int year)
+{
+    if (year >= Alice.last_repair_year + Alice.repair_interval) {
+        if (Alice.account >= Alice.repair_cost) {
+            Alice.account -= Alice.repair_cost;
+        } else if (Alice.contribution >= Alice.repair_cost) {
+            Alice.contribution -= Alice.repair_cost;
+        }
+        Alice.repair_cost *= 1.1;
+        Alice.last_repair_year = year;
+    }
+}
+
+void Alice_insurance(const int month)
+{
+    if (month == 1) {
+        Money insurance_cost = Alice.cost_house * Alice.insurance_rate;
+        if (Alice.account >= insurance_cost) {
+            Alice.account -= insurance_cost;
+        } else if (Alice.contribution >= insurance_cost) {
+            Alice.contribution -= insurance_cost;
+        }
+    }
+}
+
+void Alice_mortgage_repayment()
+{
+    if (Alice.mortgage_paid == 0 && Alice.contribution > 2000 * 1000) {
+        Alice.contribution -= 2000 * 1000;
+        Alice.monthly_payment = 0;
+        Alice.mortgage_paid = 1;
+    }
+}
+
+void Alice_pension(const int month)
+{
+    if (month == 1) {
+        Alice.pension_savings *= Alice.pension_growth;
+    }
+}
+
+void Alice_capital(const double inflation)
+{
+    Alice.cost_house *= inflation;
+    Alice.capital = Alice.contribution + Alice.cost_house + Alice.pension_savings;
+}
+
+void Bob_capital()
+{
+    Bob.capital = Bob.contribution + Bob.usd_savings;
+}
+
+void Carl_capital()
+{
+    Carl.capital = Carl.contribution;
+}
+
+void simulation()
+{
+    int month = START_MONTH;
+    int year = START_YEAR;
+    int year_index = 0;
+    
+    while (year < START_YEAR + PERIOD) {
+        double inflation = search_inflation();
+        
+        Alice_salary(month, year);
+        Alice_expenses(inflation, year);
+        Alice_repair(year);
+        Alice_insurance(month);
+        Alice_contribution();
+        Alice_mortgage_repayment();
+        Alice_pension(month);
+        Alice_capital(inflation);
+        
+        Bob_salary(month);
+        Bob_expenses(inflation, month);
+        Bob_contribution(month);
+        Bob_capital();
+        
+        Carl_salary(month);
+        Carl_expenses(inflation, month);
+        Carl_contribution();
+        Carl_capital();
+        
+        if (month == 1 && year_index < PERIOD) {
+            alice_history[year_index] = Alice.capital;
+            bob_history[year_index] = Bob.capital;
+            carl_history[year_index] = Carl.capital;
+            year_index++;
+        }
+        
+        month++;
+        if (month > 12) {
+            year++;
+            month = 1;
+        }
+    }
+}
+
+void print_graph()
+{
+    printf("\n═══════════════════════════════════════════════\n");
+    printf("ГРАФИК РОСТА КАПИТАЛА ПО ГОДАМ (в млн руб.)\n");
+    printf("═══════════════════════════════════════════════\n");
+    printf("Год  |   Алиса   |    Боб    |    Карл   \n");
+    printf("-----|-----------|-----------|-----------\n");
+    
+    for (int y = 0; y < PERIOD; y++) {
+        printf("%4d | %9.2f | %9.2f | %9.2f\n", 
+               START_YEAR + y,
+               alice_history[y] / 1000000.0,
+               bob_history[y] / 1000000.0,
+               carl_history[y] / 1000000.0);
+    }
+    printf("═══════════════════════════════════════════════\n");
+}
+
+void print()
+{
+    printf("\n═══════════════════════════════════════════════\n");
+    printf("ИТОГИ ЧЕРЕЗ %d ЛЕТ\n", PERIOD);
+    printf("═══════════════════════════════════════════════\n");
+    
+    printf("\nАЛИСА (покупка дома в ипотеку):\n");
+    printf("  Итоговый капитал:      %llu руб.\n", Alice.capital);
+    printf("  Финальная зарплата:    %llu руб.\n", Alice.salary);
+    printf("  Финальная премия:      %llu руб.\n", Alice.premia);
+    printf("  Накопления на вкладе:  %llu руб.\n", Alice.contribution);
+    printf("  Стоимость дома:        %llu руб.\n", Alice.cost_house);
+    printf("  Пенсионные накопления: %llu руб.\n", Alice.pension_savings);
+    printf("  Ипотека погашена:      %s\n", Alice.mortgage_paid ? "ДА" : "НЕТ");
+    
+    printf("\nБОБ (аренда + инвестиции):\n");
+    printf("  Итоговый капитал:      %llu руб.\n", Bob.capital);
+    printf("  Финальная зарплата:    %llu руб.\n", Bob.salary);
+    printf("  Рублевые накопления:   %llu руб.\n", Bob.contribution);
+    printf("  Валютные накопления:   %llu руб.\n", Bob.usd_savings);
+    
+    printf("\nКАРЛ (инвестиции в акции):\n");
+    printf("  Итоговый капитал:      %llu руб.\n", Carl.capital);
+    printf("  Финальная зарплата:    %llu руб.\n", Carl.salary);
+    
+    printf("\n═══════════════════════════════════════════════\n");
+    printf("РЕЗУЛЬТАТЫ СРАВНЕНИЯ\n");
+    printf("═══════════════════════════════════════════════\n");
+    
+    Money max_capital = Alice.capital;
+    if (Bob.capital > max_capital) max_capital = Bob.capital;
+    if (Carl.capital > max_capital) max_capital = Carl.capital;
+    
+    if (Alice.capital == max_capital) {
+        printf("🏆 ПОБЕДИТЕЛЬ: АЛИСА!\n");
+        Money second_best = (Bob.capital > Carl.capital) ? Bob.capital : Carl.capital;
+        printf("   Преимущество: %llu руб.\n", Alice.capital - second_best);
+    } else if (Bob.capital == max_capital) {
+        printf("🏆 ПОБЕДИТЕЛЬ: БОБ!\n");
+        Money second_best = (Alice.capital > Carl.capital) ? Alice.capital : Carl.capital;
+        printf("   Преимущество: %llu руб.\n", Bob.capital - second_best);
+    } else {
+        printf("🏆 ПОБЕДИТЕЛЬ: КАРЛ!\n");
+        Money second_best = (Alice.capital > Bob.capital) ? Alice.capital : Bob.capital;
+        printf("   Преимущество: %llu руб.\n", Carl.capital - second_best);
+    }
+    
+    printf("\nОтносительная эффективность:\n");
+    printf("  Алиса: %.1f%% от максимального капитала\n", (double)Alice.capital / max_capital * 100);
+    printf("  Боб:   %.1f%% от максимального капитала\n", (double)Bob.capital / max_capital * 100);
+    printf("  Карл:  %.1f%% от максимального капитала\n", (double)Carl.capital / max_capital * 100);
+    
+    print_graph();
+}
+
+int main()
+{
+    srand(time(NULL));
+    
+    printf("╔══════════════════════════════════════════════╗\n");
+    printf("║  ФИНАНСОВАЯ СИМУЛЯЦИЯ: 3 СТРАТЕГИИ НА 30 ЛЕТ ║\n");
+    printf("╚══════════════════════════════════════════════╝\n");
+    
+    Bob_init();
+    Alice_init();
+    Carl_init();
+    
+    printf("\nЗапуск симуляции...\n");
+    printf("Период: %d лет (с %d.%d по %d)\n", 
+           PERIOD, START_MONTH, START_YEAR, START_YEAR + PERIOD);
+    printf("Стартовые условия:\n");
+    printf("  • Зарплата: 300,000 руб.\n");
+    printf("  • Алиса покупает дом за 15 млн в ипотеку\n");
+    printf("  • Боб арендует и инвестирует 1.5 млн\n");
+    printf("  • Карл инвестирует в акции с риском\n");
+    
+    simulation();
+    print();
+    
+    return 0;
+}
