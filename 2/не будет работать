@@ -1,0 +1,267 @@
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef unsigned long long int Money; // Псевдоним для типа данных для хранения денежных сумм
+
+const int START_YEAR = 2025;   // Год начала симуляции
+const int START_MONTH = 9;     // Месяц начала симуляции (сентябрь)
+const int PERIOD = 30;         // Период симуляции в годах
+
+// Структура для хранения данных о человеке
+typedef struct Person {
+    long long int account;        // Текущий счет (свободные деньги)
+    Money capital;                // Общий капитал
+    Money premia;                 // Размер премии
+    Money salary;                 // Зарплата
+    Money monthly_payment;        // Ежемесячный платеж
+    Money necessary_expenses;     // Необходимые траты
+    Money contribution;           // Сумма на вкладе
+    Money cost_house;             // Стоимость дома
+    double rate_contribution;     // Месячная ставка по вкладу
+} Person;
+
+Person Alice; // Переменная для Алисы
+Person Bob;   // Переменная для Боба
+
+// Инициализация данных для Боба
+void Bob_init()
+{
+    Bob.capital = 0;                        // Начальный капитал
+    Bob.account = 0;                        // Начальный счет
+    Bob.salary = 300 * 1000;                // Зарплата 300,000 рублей
+    Bob.monthly_payment = 50 * 1000;        // Ежемесячная аренда
+    Bob.necessary_expenses = 50 * 1000;     // Необходимые расходы
+    Bob.contribution = 1500 * 1000;         // Начальный вклад
+    Bob.rate_contribution = 1.014;          // Месячная ставка 1.4%
+}
+
+// Инициализация данных для Алисы
+void Alice_init()
+{
+    Alice.capital = 0;                       // Начальный капитал
+    Alice.account = 0;                       // Начальный счет
+    Alice.salary = 300 * 1000;               // Зарплата 300,000 рублей
+    Alice.premia = 300 * 1000 / 2;           // Премия = 150,000 рублей (половина зарплаты)
+    Alice.monthly_payment = 192466;          // Ипотечный платеж
+    Alice.necessary_expenses = 50 * 1000;    // Необходимые расходы
+    Alice.contribution = 0;                  // Начальный вклад
+    Alice.cost_house = 15 * 1000 * 1000;     // Стоимость дома 15 млн
+    Alice.rate_contribution = 1.014;         // Месячная ставка 1.4%
+}
+
+// Функция для генерации случайного значения инфляции
+double search_inflation()
+{ 
+    int probability = (rand() % 100);        // Случайное число от 0 до 99
+    double inflation;                        // Переменная для инфляции
+
+    // Распределение вероятностей для разных уровней инфляции
+    if (probability > 90) {
+        inflation = (1001 + rand() % 2);     // Низкая инфляция: 0.1-0.2%
+    }
+    if (probability <= 90 && probability > 60) {
+        inflation = (1004 + rand() % 2);     // Умеренная инфляция: 0.4-0.5%
+    }
+    if (probability <= 60 && probability > 10) {
+        inflation = (1007 + rand() % 2);     // Средняя инфляция: 0.7-0.8%
+    }
+    if (probability <= 10) {
+        inflation = (1010 + rand() % 4);     // Высокая инфляция: 1.0-1.3%
+    }
+    return ((double) inflation / 1000.0);    // Преобразование в десятичный множитель
+}
+
+// Функция для индексации зарплаты
+double indexation()
+{
+    return ((double) (100 + rand() % 9) / 100.0); // Увеличение на 0-8%
+}
+
+// Функция начисления зарплаты Бобу
+void Bob_salary(const int month)
+{
+    if (month == 1) {                        // В январе каждого года
+        Bob.salary *= indexation();          // Индексируем зарплату
+    }
+    Bob.account = Bob.salary;                // Начисляем зарплату на счет
+}
+
+// Функция начисления зарплаты Алисе
+void Alice_salary(const int month, const int year)
+{
+    static int salary_doubled = 0;           // Флаг: была ли зарплата уже увеличена в 2 раза
+    
+    // С сентября 2026 года зарплата увеличивается в 2 раза
+    if (year >= 2026 && month >= 9 && salary_doubled == 0) {
+        Alice.salary *= 2;                   // Увеличиваем зарплату в 2 раза
+        salary_doubled = 1;                  // Устанавливаем флаг
+        Alice.premia = Alice.salary / 2;     // Премия тоже увеличивается (половина новой зарплаты)
+    }
+    
+    // Обычная индексация в январе каждого года (если Алиса работает в январе)
+    if (month == 1 && year != 2026) {       // В январе, но не в 2026 году (так как в отпуске)
+        Alice.salary *= indexation();        // Индексируем зарплату
+        Alice.premia = Alice.salary / 2;     // Обновляем премию (половина от новой зарплаты)
+    }
+    
+    // Проверяем, находится ли Алиса в отпуске в этом месяце
+    int on_vacation = 0;
+    
+    // Алиса в отпуске в январе 2026 года
+    if (year == 2026 && month == 1) {
+        on_vacation = 1;
+    }
+    // Алиса в отпуске в апреле 2026 года
+    else if (year == 2026 && month == 4) {
+        on_vacation = 1;
+    }
+    // Алиса в отпуске в июле и августе 2026 года
+    else if (year == 2026 && (month == 7 || month == 8)) {
+        on_vacation = 1;
+    }
+    
+    // Если Алиса не в отпуске - начисляем зарплату
+    if (!on_vacation) {
+        Alice.account = Alice.salary;        // Начисляем базовую зарплату
+    } else {
+        Alice.account = 0;                   // В отпуске зарплата не начисляется
+    }
+    
+    // 13-я зарплата начисляется в декабре, если Алиса не в отпуске
+    if (month == 12 && !on_vacation) {
+        Alice.account += Alice.salary;       // Начисляем 13-ю зарплату
+    }
+    
+    // Премия начисляется каждые 3 месяца, если Алиса не в отпуске
+    // Проверяем, чтобы премия не начислялась в месяцы отпуска
+    if (month % 3 == 0 && !on_vacation) {
+        Alice.account += Alice.premia;       // Начисляем премию
+    }
+}
+
+// Функция для учета расходов Боба
+void Bob_expenses(const double inflation)
+{
+    Bob.necessary_expenses *= inflation;     // Увеличиваем расходы на инфляцию
+    Bob.account -= Bob.necessary_expenses;   // Вычитаем расходы
+    Bob.monthly_payment *= inflation;        // Увеличиваем аренду на инфляцию
+    Bob.account -= Bob.monthly_payment;      // Вычитаем аренду
+}
+
+// Функция для учета расходов Алисы
+void Alice_expenses(const double inflation)
+{
+    Alice.necessary_expenses *= inflation;   // Увеличиваем расходы на инфляцию
+    Alice.account -= Alice.necessary_expenses; // Вычитаем расходы
+    Alice.account -= Alice.monthly_payment;  // Вычитаем ипотечный платеж (фиксированный)
+}
+
+// Функция для начисления процентов по вкладу Боба
+void Bob_contribution()
+{
+    // Все деньги со счета переводим на вклад и начисляем проценты
+    Bob.contribution = (Bob.contribution + Bob.account) * Bob.rate_contribution;
+}
+
+// Функция для начисления процентов по вкладу Алисы
+void Alice_contribution()
+{
+    // Все деньги со счета переводим на вклад и начисляем проценты
+    Alice.contribution = (Alice.contribution + Alice.account) * Alice.rate_contribution;
+}
+
+// Функция для расчета капитала Алисы
+void Alice_capital(const double inflation)
+{
+    Alice.cost_house *= inflation;           // Переоцениваем стоимость дома
+    Alice.capital = Alice.contribution + Alice.cost_house; // Капитал = вклад + дом
+}
+
+// Функция для расчета капитала Боба
+void Bob_capital(const double inflation)
+{
+    Bob.capital = Bob.contribution;          // Капитал Боба = только вклад
+}
+
+// Основная функция симуляции
+void simulation()
+{
+    int month = START_MONTH;         // Начинаем с сентября
+    int year = START_YEAR;           // Начинаем с 2025 года
+    
+    // Симуляция на 30 лет
+    while (year < START_YEAR + PERIOD) {
+        double inflation = search_inflation(); // Получаем инфляцию для текущего месяца
+        
+        // Обрабатываем финансы Алисы
+        Alice_salary(month, year);    // Начисляем зарплату (учитывая отпуска)
+        Alice_expenses(inflation);    // Учитываем расходы
+        Alice_contribution();         // Начисляем проценты по вкладу
+        Alice_capital(inflation);     // Пересчитываем капитал
+
+        // Обрабатываем финансы Боба
+        Bob_salary(month);            // Начисляем зарплату
+        Bob_expenses(inflation);      // Учитываем расходы
+        Bob_contribution();           // Начисляем проценты по вкладу
+        Bob_capital(inflation);       // Пересчитываем капитал
+
+        month++;                      // Переходим к следующему месяцу
+        
+        // Если месяц больше декабря, переходим к следующему году
+        if (month > 12) {
+            year++;
+            month = 1;                // Начинаем с января
+        }
+    }
+}
+
+// Функция для вывода результатов
+void print()
+{
+    // Вывод капитала обоих участников
+    printf("Капитал Алисы: %lld руб.\n", Alice.capital);
+    printf("Капитал Боба: %lld руб.\n", Bob.capital);
+    printf("\n");
+    
+    // Вывод финальной зарплаты Алисы
+    printf("Финальная зарплата Алисы: %lld руб.\n", Alice.salary);
+    printf("Финальная премия Алисы: %lld руб.\n", Alice.premia);
+    printf("\n");
+    
+    // Вывод информации об отпусках
+    printf("Алиса была в отпуске в 2026 году:\n");
+    printf("- Январь 2026: отпуск\n");
+    printf("- Апрель 2026: отпуск\n");
+    printf("- Июль 2026: отпуск\n");
+    printf("- Август 2026: отпуск\n");
+    printf("\n");
+    printf("С сентября 2026 года зарплата Алисы увеличена в 2 раза\n");
+    printf("\n");
+
+    // Определение победителя
+    if (Alice.capital > Bob.capital) {
+        printf("Победитель: Алиса!\n");
+        printf("Преимущество: %lld руб.\n", Alice.capital - Bob.capital);
+    } else if (Bob.capital > Alice.capital) {
+        printf("Победитель: Боб!\n");
+        printf("Преимущество: %lld руб.\n", Bob.capital - Alice.capital);
+    } else {
+        printf("Ничья!\n");
+    }
+}
+
+// Главная функция программы
+int main()
+{
+    // Инициализация генератора случайных чисел
+    srand(42); // Используем фиксированное зерно для воспроизводимости результатов
+    
+    Bob_init();     // Инициализация данных Боба
+    Alice_init();   // Инициализация данных Алисы
+
+    simulation();   // Запуск симуляции на 30 лет
+
+    print();        // Вывод результатов
+
+    return 0;       // Завершение программы
+}
